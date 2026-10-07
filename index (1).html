@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hệ thống quản lý nhà hàng</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1f2421;--mut:#6b726d;--bd:#e3ded3;--pri:#c2410c;--pri2:#fff;--free:#15803d;--freeb:#dcfce7;--occ:#b91c1c;--occb:#fee2e2;--res:#a16207;--resb:#fef3c7}
+@media (prefers-color-scheme:dark){:root{--bg:#171917;--card:#222522;--tx:#eceee9;--mut:#9aa19b;--bd:#343834;--pri:#fb923c;--pri2:#1a1a1a;--free:#4ade80;--freeb:#14301e;--occ:#f87171;--occb:#3b1a1a;--res:#fbbf24;--resb:#3a2f10}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:12px 18px;border-bottom:1px solid var(--bd);background:var(--card)}
+h1{font-size:18px;margin:0 0 8px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+button,input,select{font:inherit;color:inherit}
+.tab,.chip{border:1px solid var(--bd);background:transparent;padding:6px 13px;border-radius:999px;cursor:pointer;font-size:14px}
+.tab.on,.chip.on{background:var(--pri);color:var(--pri2);border-color:var(--pri)}
+main{max-width:1050px;margin:0 auto;padding:16px}
+h2{font-size:17px;margin:22px 0 10px}h2:first-child{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.g2{grid-template-columns:1fr}}
+.card,.stat{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
+.card h4{margin:0 0 6px}.fl{font-size:13px;padding:1px 0}.fl small{color:var(--mut)}
+.k{font-size:10px;font-style:normal;background:var(--pri);color:var(--pri2);border-radius:4px;padding:0 4px;margin-left:4px}
+.stat b{display:block;font-size:19px}.stat span,.mut{color:var(--mut);font-size:13px}
+.bar,.f{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end}
+.f label{display:grid;gap:3px;font-size:12px;color:var(--mut)}
+input,select{padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--card)}
+.btn{background:var(--pri);color:var(--pri2);border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn.g{background:transparent;color:var(--tx);border:1px solid var(--bd);font-weight:500}
+.btn.d{background:var(--occ);color:var(--pri2)}.btn.s{padding:3px 9px;font-size:13px}
+.tb{background:var(--card);border:2px solid var(--bd);border-radius:14px;padding:12px;cursor:pointer}
+.tb h3{margin:0}.tb small{display:block;color:var(--mut)}.tb .ac{margin-top:8px}
+.tb.free{border-color:var(--free)}.tb.occupied{border-color:var(--occ);background:var(--occb)}.tb.reserved{border-color:var(--res);background:var(--resb)}
+.badge{display:inline-block;margin-top:6px;font-size:12px;font-weight:700;padding:1px 9px;border-radius:999px}
+.free .badge{background:var(--freeb);color:var(--free)}.occupied .badge{background:var(--occ);color:var(--pri2)}.reserved .badge{background:var(--res);color:var(--pri2)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--bd)}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd);font-size:14px}th{font-size:12px;color:var(--mut);text-transform:uppercase}
+.wrap{overflow-x:auto}.off{opacity:.5}.ok{color:var(--free);font-weight:700}.bad{color:var(--occ);font-weight:700}
+pre{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;overflow:auto;font-size:12px;max-height:340px}
+dialog{border:1px solid var(--bd);border-radius:16px;background:var(--card);color:var(--tx);padding:0;width:min(520px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(0,0,0,.5)}.dc{padding:18px}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
+.li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)}.li span{flex:1}
+.box{max-height:300px;overflow:auto}
+.tot{display:flex;justify-content:space-between;padding:2px 0}.tot.b{font-size:18px;font-weight:700}
+@media print{body>*:not(dialog){display:none}dialog{position:static;border:0;width:100%}.row{display:none}}
+</style>
+</head>
+<body>
+<header><h1>🍽️ Hệ thống quản lý nhà hàng</h1><nav id="nav"></nav></header>
+<main id="app"></main>
+<dialog id="dlg"><div class="dc" id="dlgc"></div></dialog>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n).toLocaleString('vi-VN')+'đ';let _n=0;const uid=()=>Date.now().toString(36)+(_n++).toString(36);
+const CATS=['Khai vị','Món chính','Đồ uống','Tráng miệng'],VAT=0.1,ST={free:'Trống',occupied:'Có khách',reserved:'Đã đặt'};
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const hhmm=ts=>new Date(ts).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
+const SCHEMA={
+ban:'id INT PK|ten VARCHAR(50) UNIQUE|khu_vuc VARCHAR(50)|so_cho INT',
+mon_an:'id INT PK|ten VARCHAR(100)|nhom VARCHAR(50)|gia DECIMAL(12,0)|con_ban BOOL',
+dat_ban:'id INT PK|ban_id INT FK→ban|ten_khach VARCHAR(100)|sdt VARCHAR(15)|so_nguoi INT|ngay DATE|gio TIME|trang_thai ENUM(cho,da_den,huy)',
+don_hang:'id INT PK|ban_id INT FK→ban|ten_khach VARCHAR(100)|so_nguoi INT|gio_mo DATETIME|trang_thai ENUM(mo,da_tt)',
+chi_tiet_don:'id INT PK|don_id INT FK→don_hang|mon_id INT FK→mon_an|so_luong INT|don_gia DECIMAL(12,0)',
+hoa_don:'id INT PK|don_id INT FK→don_hang|tam_tinh DECIMAL(12,0)|giam_gia DECIMAL(12,0)|vat DECIMAL(12,0)|tong DECIMAL(12,0)|pttt ENUM(tien_mat,chuyen_khoan,the)|ngay_tt DATETIME'};
+/* ===== Dữ liệu (mô phỏng CSDL bằng localStorage) ===== */
+let TEST=false,DB=load()||seed();
+function seed(){const seats=[2,4,4,6,2,4,4,6,8,4];
+ const t=seats.map((s,i)=>({id:uid(),name:'Bàn '+(i+1),area:i<6?'Tầng 1':'Tầng 2',seats:s}));
+ const m=[['Gỏi cuốn tôm thịt',0,45000],['Chả giò',0,50000],['Cơm tấm sườn',1,65000],['Phở bò tái',1,70000],['Bún chả',1,68000],['Lẩu thái hải sản',1,320000],['Cà phê sữa đá',2,29000],['Trà đào cam sả',2,39000],['Nước cam ép',2,35000],['Chè khúc bạch',3,32000],['Bánh flan',3,25000]].map(x=>({id:uid(),name:x[0],cat:CATS[x[1]],price:x[2],avail:true}));
+ return{tables:t,menu:m,res:[],orders:[],invoices:[]}}
+function load(){try{const d=JSON.parse(localStorage.getItem('rm_full_v1'));return d&&d.tables?d:null}catch(e){return null}}
+function save(){if(TEST)return;try{localStorage.setItem('rm_full_v1',JSON.stringify(DB))}catch(e){}}
+const T=id=>DB.tables.find(t=>t.id===id),Mn=id=>DB.menu.find(m=>m.id===id);
+const openOrder=tid=>DB.orders.find(o=>o.tableId===tid&&o.status==='mo');
+const st=t=>openOrder(t.id)?'occupied':DB.res.some(r=>r.tableId===t.id&&r.status==='cho'&&r.date===today())?'reserved':'free';
+/* ===== Nghiệp vụ (tách khỏi giao diện để kiểm thử) ===== */
+const ok=(x)=>({ok:true,x}),no=m=>({ok:false,msg:m}),toMin=t=>{const[h,m]=t.split(':');return h*60+ +m};
+const A={
+ saveTable(d){const name=(d.name||'').trim();if(!name)return no('Thiếu tên bàn');if(!(d.seats>=1))return no('Số chỗ phải từ 1 trở lên');
+  if(DB.tables.some(t=>t.name.toLowerCase()===name.toLowerCase()&&t.id!==d.id))return no('Tên bàn đã tồn tại');
+  const o=d.id?T(d.id):(DB.tables.push({id:uid()}),DB.tables[DB.tables.length-1]);Object.assign(o,{name,area:(d.area||'Tầng 1').trim(),seats:+d.seats});return ok(o)},
+ delTable(id){const t=T(id);if(!t)return no('Không tìm thấy bàn');if(st(t)!=='free'||DB.res.some(r=>r.tableId===id&&r.status==='cho'))return no('Bàn đang có khách hoặc có đặt trước, không thể xóa');
+  DB.tables=DB.tables.filter(x=>x.id!==id);return ok()},
+ saveMenu(d){const name=(d.name||'').trim();if(!name)return no('Thiếu tên món');if(!(d.price>=0)||isNaN(d.price))return no('Giá không hợp lệ');
+  const o=d.id?Mn(d.id):(DB.menu.push({id:uid(),avail:true}),DB.menu[DB.menu.length-1]);Object.assign(o,{name,cat:d.cat,price:+d.price});return ok(o)},
+ reserve(d){const t=T(d.tableId);if(!t)return no('Chưa chọn bàn');if(!(d.name||'').trim())return no('Thiếu tên khách');
+  if(!/^0\d{9}$/.test(d.phone||''))return no('Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0');if(!(d.guests>=1))return no('Số người không hợp lệ');
+  if(d.guests>t.seats)return no(`${t.name} chỉ có ${t.seats} chỗ`);if(!d.date||d.date<today())return no('Ngày đặt không hợp lệ');if(!d.time)return no('Thiếu giờ đặt');
+  if(DB.res.some(r=>r.tableId===t.id&&r.status==='cho'&&r.date===d.date&&Math.abs(toMin(r.time)-toMin(d.time))<120))return no('Bàn đã có người đặt trong khung giờ này (cách nhau tối thiểu 2 giờ)');
+  const r={id:uid(),tableId:t.id,name:d.name.trim(),phone:d.phone,guests:+d.guests,date:d.date,time:d.time,status:'cho'};DB.res.push(r);return ok(r)},
+ cancelRes(id){const r=DB.res.find(x=>x.id===id);if(!r||r.status!=='cho')return no('Không thể hủy');r.status='huy';return ok(r)},
+ openOrder(tid,guest,n){const t=T(tid);if(!t)return no('Không tìm thấy bàn');if(openOrder(tid))return no('Bàn đang có khách');if(n>t.seats)return no(`${t.name} chỉ có ${t.seats} chỗ`);
+  const o={id:uid(),tableId:tid,guest:guest||'',guests:+n||1,openedAt:Date.now(),status:'mo',items:[]};DB.orders.push(o);return ok(o)},
+ checkIn(rid){const r=DB.res.find(x=>x.id===rid);if(!r||r.status!=='cho')return no('Đặt bàn không hợp lệ');const o=A.openOrder(r.tableId,r.name,r.guests);if(!o.ok)return o;r.status='da_den';return o},
+ addItem(oid,mid,d=1){const o=DB.orders.find(x=>x.id===oid);if(!o||o.status!=='mo')return no('Đơn không còn mở');const m=Mn(mid);if(!m)return no('Món không tồn tại');if(d>0&&!m.avail)return no('Món đã hết');
+  let it=o.items.find(i=>i.menuId===mid);if(!it){if(d<=0)return ok(o);o.items.push(it={menuId:mid,name:m.name,price:m.price,qty:0})}
+  it.qty+=d;if(it.qty<=0)o.items=o.items.filter(i=>i!==it);return ok(o)},
+ calc(o,pct){const sub=o.items.reduce((s,i)=>s+i.price*i.qty,0),disc=sub*(pct||0)/100,vat=(sub-disc)*VAT;return{sub,disc,vat,total:sub-disc+vat}},
+ pay(oid,p){const o=DB.orders.find(x=>x.id===oid);if(!o||o.status!=='mo')return no('Đơn không còn mở');if(!o.items.length)return no('Đơn chưa có món nào');
+  const pct=+p.disc||0;if(pct<0||pct>100)return no('Giảm giá phải từ 0 đến 100%');const c=A.calc(o,pct);
+  const recv=p.method==='Tiền mặt'&&p.recv!==''&&p.recv!=null?+p.recv:c.total;if(recv<Math.round(c.total))return no('Tiền khách đưa chưa đủ');
+  const inv={id:'HD'+String(DB.invoices.length+1).padStart(4,'0'),orderId:o.id,table:T(o.tableId)?.name||'?',guest:o.guest,items:o.items.map(i=>({...i})),...c,pct,method:p.method,recv,change:recv-c.total,paidAt:Date.now()};
+  DB.invoices.push(inv);o.status='da_tt';return ok(inv)}
+};
+/* ===== Điều hướng ===== */
+const TABS=[['db','1. CSDL & Đặt bàn'],['tm','2. Bàn & Menu'],['od','3. Gọi món'],['pay','4. Thanh toán & Hóa đơn'],['test','5. Kiểm thử & Báo cáo']];
+let tab='db',selO=null,oCat='all',mS='',mC='all',payS={disc:0,method:'Tiền mặt',recv:''},TR=null;
+const go=t=>{tab=t;R()};
+function R(){$('#nav').innerHTML=TABS.map(([k,l])=>`<button class="tab ${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
+ $('#app').innerHTML=({db:vDB,tm:vTM,od:vOD,pay:vPay,test:vTest})[tab]()}
+const show=h=>{$('#dlgc').innerHTML=h;if(!$('#dlg').open)$('#dlg').showModal()},closeD=()=>$('#dlg').close();
+const run=(r,after)=>{if(!r.ok)return alert(r.msg);save();after&&after();R()};
+/* ===== 1. CSDL & Đặt bàn ===== */
+function vDB(){
+ const cnt={ban:DB.tables.length,mon_an:DB.menu.length,dat_ban:DB.res.length,don_hang:DB.orders.length,chi_tiet_don:DB.orders.reduce((s,o)=>s+o.items.length,0),hoa_don:DB.invoices.length};
+ const cards=Object.entries(SCHEMA).map(([n,f])=>`<div class="card"><h4>${n} <span class="mut">(${cnt[n]} dòng)</span></h4>${f.split('|').map(x=>{const[c,...r]=x.split(' '),s=r.join(' ');return `<div class="fl"><b>${c}</b> <small>${esc(s.replace(' PK','').replace('PK','').replace(/FK→(\w+)/,'→ $1'))}</small>${/PK/.test(s)?'<i class="k">PK</i>':''}${/FK/.test(s)?'<i class="k">FK</i>':''}</div>`}).join('')}</div>`).join('');
+ const sql=Object.entries(SCHEMA).map(([n,f])=>`CREATE TABLE ${n} (\n`+f.split('|').map(x=>'  '+x.replace(' PK',' PRIMARY KEY AUTO_INCREMENT').replace(/ FK→(\w+)/,' REFERENCES $1(id)')).join(',\n')+'\n);').join('\n\n');
+ const rs=[...DB.res].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ return `<h2>Thiết kế cơ sở dữ liệu</h2>
+ <p class="mut">Quan hệ: ban 1—N dat_ban · ban 1—N don_hang · don_hang 1—N chi_tiet_don · mon_an 1—N chi_tiet_don · don_hang 1—1 hoa_don. Trạng thái bàn (trống/có khách/đã đặt) được suy ra từ don_hang và dat_ban nên không lưu riêng.</p>
+ <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">${cards}</div>
+ <details style="margin-top:10px"><summary>Xem mã SQL (MySQL)</summary><pre>${esc(sql)}</pre></details>
+ <h2>Phân hệ đặt bàn</h2>
+ <div class="f"><label>Tên khách<input id="r_name"></label><label>SĐT<input id="r_phone" placeholder="0901234567"></label>
+ <label>Số người<input id="r_n" type="number" min="1" value="2" style="width:80px"></label><label>Ngày<input id="r_date" type="date" value="${today()}"></label>
+ <label>Giờ<input id="r_time" type="time" value="18:00"></label><label>Bàn<select id="r_t">${DB.tables.map(t=>`<option value="${t.id}">${esc(t.name)} (${t.seats} chỗ)</option>`).join('')}</select></label>
+ <button class="btn" onclick="doRes()">Đặt bàn</button></div>
+ <div class="wrap"><table><thead><tr><th>Khách</th><th>SĐT</th><th>Bàn</th><th>Người</th><th>Thời gian</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+ ${rs.map(r=>`<tr class="${r.status==='huy'?'off':''}"><td>${esc(r.name)}</td><td>${r.phone}</td><td>${esc(T(r.tableId)?.name||'?')}</td><td>${r.guests}</td><td>${r.time} · ${r.date.split('-').reverse().join('/')}</td><td>${{cho:'Chờ khách',da_den:'Đã nhận bàn',huy:'Đã hủy'}[r.status]}</td>
+ <td style="white-space:nowrap">${r.status==='cho'?`<button class="btn s" onclick="ciRes('${r.id}')">Nhận bàn</button> <button class="btn g s" onclick="run(A.cancelRes('${r.id}'))">Hủy</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7" class="mut">Chưa có đặt bàn nào.</td></tr>'}</tbody></table></div>`}
+function doRes(){run(A.reserve({tableId:$('#r_t').value,name:$('#r_name').value,phone:$('#r_phone').value,guests:+$('#r_n').value,date:$('#r_date').value,time:$('#r_time').value}))}
+function ciRes(id){const r=A.checkIn(id);run(r,()=>{selO=r.x.id;tab='od'})}
+/* ===== 2. Bàn & Menu ===== */
+function vTM(){
+ const cards=DB.tables.map(t=>{const s=st(t),o=openOrder(t.id),r=s==='reserved'?DB.res.find(r=>r.tableId===t.id&&r.status==='cho'&&r.date===today()):null;
+ return `<div class="tb ${s}" onclick="tClick('${t.id}')"><h3>${esc(t.name)}</h3><small>${esc(t.area)} · ${t.seats} chỗ</small>${o?`<small>${esc(o.guest||'Khách lẻ')} · ${fmt(A.calc(o).sub)}</small>`:''}${r?`<small>${esc(r.name)} · ${r.time}</small>`:''}<span class="badge">${ST[s]}</span>
+ <div class="ac"><button class="btn g s" onclick="event.stopPropagation();tForm('${t.id}')">Sửa</button> <button class="btn d s" onclick="event.stopPropagation();run(A.delTable('${t.id}'))">Xóa</button></div></div>`}).join('');
+ const c={free:0,occupied:0,reserved:0};DB.tables.forEach(t=>c[st(t)]++);
+ return `<h2>Quản lý bàn & nhận bàn</h2>
+ <div class="bar"><span class="mut">Trống <b>${c.free}</b> · Có khách <b>${c.occupied}</b> · Đã đặt hôm nay <b>${c.reserved}</b></span><button class="btn" style="margin-left:auto" onclick="tForm()">+ Thêm bàn</button></div>
+ <div class="grid">${cards}</div>
+ <h2>Danh mục món ăn</h2>
+ <div class="bar"><input id="ms" placeholder="Tìm món..." value="${esc(mS)}" oninput="mS=this.value;mRows()"><select onchange="mC=this.value;mRows()"><option value="all">Tất cả nhóm</option>${CATS.map(c=>`<option ${mC===c?'selected':''}>${c}</option>`).join('')}</select>
+ <button class="btn" style="margin-left:auto" onclick="mForm()">+ Thêm món</button></div>
+ <div class="wrap"><table><thead><tr><th>Tên món</th><th>Nhóm</th><th>Giá</th><th>Trạng thái</th><th></th></tr></thead><tbody id="mrows">${mHtml()}</tbody></table></div>`}
+const mHtml=()=>DB.menu.filter(m=>(mC==='all'||m.cat===mC)&&m.name.toLowerCase().includes(mS.toLowerCase())).map(m=>`<tr class="${m.avail?'':'off'}"><td>${esc(m.name)}</td><td>${m.cat}</td><td>${fmt(m.price)}</td><td><button class="chip" onclick="m_t('${m.id}')">${m.avail?'Đang bán':'Hết món'}</button></td>
+ <td style="white-space:nowrap"><button class="btn g s" onclick="mForm('${m.id}')">Sửa</button> <button class="btn d s" onclick="m_d('${m.id}')">Xóa</button></td></tr>`).join('')||'<tr><td colspan="5" class="mut">Không có món.</td></tr>';
+const mRows=()=>{$('#mrows').innerHTML=mHtml()};
+const m_t=id=>{Mn(id).avail=!Mn(id).avail;save();mRows()},m_d=id=>{if(confirm('Xóa món này?')){DB.menu=DB.menu.filter(m=>m.id!==id);save();mRows()}};
+function tClick(id){const t=T(id),s=st(t);
+ if(s==='occupied'){selO=openOrder(id).id;return go('od')}
+ if(s==='reserved'){const r=DB.res.find(r=>r.tableId===id&&r.status==='cho'&&r.date===today());return show(`<h2>${esc(t.name)} - đã đặt</h2><p>${esc(r.name)} · ${r.phone} · ${r.guests} người · ${r.time}</p><div class="row"><button class="btn g" onclick="closeD()">Đóng</button><button class="btn" onclick="closeD();ciRes('${r.id}')">Khách đến - Nhận bàn</button></div>`)}
+ show(`<h2>Nhận bàn ${esc(t.name)} <span class="mut">(${t.seats} chỗ)</span></h2><div class="f"><label>Tên khách<input id="w_name" placeholder="Khách lẻ"></label><label>Số người<input id="w_n" type="number" min="1" value="2" style="width:80px"></label></div>
+ <div class="row"><button class="btn g" onclick="closeD()">Đóng</button><button class="btn" onclick="walkIn('${id}')">Nhận bàn</button></div>`)}
+function walkIn(id){const r=A.openOrder(id,$('#w_name').value.trim(),+$('#w_n').value);run(r,()=>{selO=r.x.id;closeD();tab='od'})}
+function tForm(id){const t=id?T(id):{name:'Bàn '+(DB.tables.length+1),area:'Tầng 1',seats:4};
+ show(`<h2>${id?'Sửa bàn':'Thêm bàn'}</h2><div class="f"><label>Tên bàn<input id="t_name" value="${esc(t.name)}"></label><label>Khu vực<input id="t_area" value="${esc(t.area)}"></label><label>Số chỗ<input id="t_seats" type="number" min="1" value="${t.seats}" style="width:80px"></label></div>
+ <div class="row"><button class="btn g" onclick="closeD()">Hủy</button><button class="btn" onclick="run(A.saveTable({id:'${id||''}'||undefined,name:$('#t_name').value,area:$('#t_area').value,seats:+$('#t_seats').value}),closeD)">Lưu</button></div>`)}
+function mForm(id){const m=id?Mn(id):{name:'',cat:CATS[0],price:0};
+ show(`<h2>${id?'Sửa món':'Thêm món'}</h2><div class="f"><label>Tên món<input id="i_name" value="${esc(m.name)}"></label><label>Nhóm<select id="i_cat">${CATS.map(c=>`<option ${m.cat===c?'selected':''}>${c}</option>`).join('')}</select></label><label>Giá (VNĐ)<input id="i_price" type="number" min="0" step="1000" value="${m.price}"></label></div>
+ <div class="row"><button class="btn g" onclick="closeD()">Hủy</button><button class="btn" onclick="run(A.saveMenu({id:'${id||''}'||undefined,name:$('#i_name').value,cat:$('#i_cat').value,price:+$('#i_price').value}),closeD)">Lưu</button></div>`)}
+/* ===== 3. Gọi món ===== */
+const openOrders=()=>DB.orders.filter(o=>o.status==='mo');
+function chips(os){if(!os.find(o=>o.id===selO))selO=os[0].id;return `<div class="bar">${os.map(o=>`<button class="chip ${o.id===selO?'on':''}" onclick="selO='${o.id}';R()">${esc(T(o.tableId)?.name||'?')}</button>`).join('')}</div>`}
+function vOD(){const os=openOrders();if(!os.length)return `<h2>Gọi món</h2><p class="mut">Chưa có bàn nào đang phục vụ. Hãy nhận bàn ở mục 1 hoặc 2.</p>`;
+ const h=chips(os),o=os.find(x=>x.id===selO),c=A.calc(o);
+ return `<h2>Gọi món</h2>${h}<div class="g2"><div><div class="bar">${['all',...CATS].map(k=>`<button class="chip ${oCat===k?'on':''}" onclick="oCat='${k}';R()">${k==='all'?'Tất cả':k}</button>`).join('')}</div>
+ <div class="box">${DB.menu.filter(m=>oCat==='all'||m.cat===oCat).map(m=>`<div class="li ${m.avail?'':'off'}"><span>${esc(m.name)}</span><b>${fmt(m.price)}</b>${m.avail?`<button class="btn s" onclick="addI('${m.id}',1)">+</button>`:'<small>Hết</small>'}</div>`).join('')}</div></div>
+ <div class="card"><h4>${esc(T(o.tableId)?.name||'')} · ${esc(o.guest||'Khách lẻ')} · ${o.guests} người</h4><div class="box">${o.items.map(i=>`<div class="li"><span>${esc(i.name)}</span><button class="btn g s" onclick="addI('${i.menuId}',-1)">−</button><b>${i.qty}</b><button class="btn g s" onclick="addI('${i.menuId}',1)">+</button><b style="min-width:80px;text-align:right">${fmt(i.price*i.qty)}</b></div>`).join('')||'<p class="mut">Chưa gọi món nào.</p>'}</div>
+ <div class="tot b"><span>Tạm tính</span><span>${fmt(c.sub)}</span></div><div class="row"><button class="btn" onclick="go('pay')">Đi thanh toán →</button></div></div></div>`}
+const addI=(mid,d)=>run(A.addItem(selO,mid,d));
+/* ===== 4. Thanh toán & Hóa đơn ===== */
+function vPay(){const os=openOrders();let top='<p class="mut">Không có đơn nào đang chờ thanh toán.</p>';
+ if(os.length){const h=chips(os),o=os.find(x=>x.id===selO),c=A.calc(o,payS.disc),cash=payS.method==='Tiền mặt',rv=payS.recv===''?c.total:+payS.recv;
+ top=`${h}<div class="card" style="max-width:480px">${o.items.map(i=>`<div class="tot"><span>${esc(i.name)} × ${i.qty}</span><span>${fmt(i.price*i.qty)}</span></div>`).join('')||'<p class="mut">Đơn chưa có món.</p>'}<hr>
+ <div class="tot"><span>Tạm tính</span><span>${fmt(c.sub)}</span></div><div class="tot"><span>Giảm giá (${payS.disc}%)</span><span>−${fmt(c.disc)}</span></div><div class="tot"><span>VAT ${VAT*100}%</span><span>${fmt(c.vat)}</span></div><div class="tot b"><span>Tổng thanh toán</span><span>${fmt(c.total)}</span></div>
+ <div class="f" style="margin-top:10px"><label>Giảm giá (%)<input type="number" min="0" max="100" value="${payS.disc}" style="width:90px" onchange="payS.disc=+this.value;R()"></label>
+ <label>Hình thức<select onchange="payS.method=this.value;R()">${['Tiền mặt','Chuyển khoản','Thẻ'].map(m=>`<option ${payS.method===m?'selected':''}>${m}</option>`).join('')}</select></label>
+ ${cash?`<label>Khách đưa<input type="number" value="${payS.recv}" placeholder="${Math.round(c.total)}" style="width:130px" onchange="payS.recv=this.value;R()"></label>`:''}</div>
+ ${cash?`<div class="tot"><span>Tiền thối</span><b>${fmt(Math.max(0,rv-c.total))}</b></div>`:''}
+ <div class="row"><button class="btn" onclick="doPay()">Xác nhận thanh toán</button></div></div>`}
+ const iv=[...DB.invoices].reverse();
+ return `<h2>Thanh toán</h2>${top}<h2>Lịch sử hóa đơn</h2><div class="wrap"><table><thead><tr><th>Mã</th><th>Bàn</th><th>Thời gian</th><th>Tổng</th><th>Hình thức</th><th></th></tr></thead><tbody>
+ ${iv.map(i=>`<tr><td>${i.id}</td><td>${esc(i.table)}</td><td>${hhmm(i.paidAt)}</td><td>${fmt(i.total)}</td><td>${i.method}</td><td><button class="btn g s" onclick="showInv('${i.id}')">Xem / In</button></td></tr>`).join('')||'<tr><td colspan="6" class="mut">Chưa có hóa đơn.</td></tr>'}</tbody></table></div>`}
+function doPay(){const r=A.pay(selO,payS);run(r,()=>{payS={disc:0,method:'Tiền mặt',recv:''};showInv(r.x.id)})}
+function showInv(id){const i=DB.invoices.find(x=>x.id===id);
+ show(`<div style="text-align:center"><h2 style="margin:0">HÓA ĐƠN ${i.id}</h2><div class="mut">${esc(i.table)} · ${esc(i.guest||'Khách lẻ')} · ${hhmm(i.paidAt)}</div></div><hr>
+ ${i.items.map(x=>`<div class="tot"><span>${esc(x.name)} × ${x.qty} <small class="mut">(${fmt(x.price)})</small></span><span>${fmt(x.price*x.qty)}</span></div>`).join('')}<hr>
+ <div class="tot"><span>Tạm tính</span><span>${fmt(i.sub)}</span></div><div class="tot"><span>Giảm giá (${i.pct}%)</span><span>−${fmt(i.disc)}</span></div><div class="tot"><span>VAT ${VAT*100}%</span><span>${fmt(i.vat)}</span></div><div class="tot b"><span>TỔNG</span><span>${fmt(i.total)}</span></div>
+ <div class="tot"><span>${i.method}</span><span>${fmt(i.recv)}</span></div>${i.method==='Tiền mặt'?`<div class="tot"><span>Tiền thối</span><span>${fmt(i.change)}</span></div>`:''}
+ <p style="text-align:center" class="mut">Cảm ơn quý khách!</p><div class="row"><button class="btn g" onclick="closeD()">Đóng</button><button class="btn" onclick="window.print()">In hóa đơn</button></div>`)}
+/* ===== 5. Kiểm thử & Báo cáo ===== */
+const X={},gO=tid=>openOrder(tid);
+const TESTS=[
+['TC01','Thêm bàn hợp lệ','Thành công, số bàn tăng lên 11',()=>A.saveTable({name:'Bàn VIP',area:'VIP',seats:8}).ok&&DB.tables.length===11],
+['TC02','Thêm bàn trùng tên','Bị từ chối',()=>!A.saveTable({name:'bàn 1',area:'x',seats:2}).ok],
+['TC03','Bàn có số chỗ bằng 0','Bị từ chối',()=>!A.saveTable({name:'Z',area:'x',seats:0}).ok],
+['TC04','Thêm món giá âm','Bị từ chối',()=>!A.saveMenu({name:'X',cat:CATS[0],price:-5}).ok],
+['TC05','Thêm món hợp lệ','Thành công',()=>A.saveMenu({name:'Món mới',cat:CATS[1],price:50000}).ok],
+['TC06','Đặt bàn hợp lệ','Tạo đặt bàn trạng thái "chờ"',()=>A.reserve({tableId:X.t0,name:'An',phone:'0901234567',guests:2,date:X.tmr,time:'18:00'}).ok],
+['TC07','Đặt trùng giờ (cách 1 giờ)','Bị từ chối',()=>!A.reserve({tableId:X.t0,name:'Bình',phone:'0901234568',guests:2,date:X.tmr,time:'19:00'}).ok],
+['TC08','Đặt vượt số chỗ','Bị từ chối',()=>!A.reserve({tableId:X.t0,name:'Cường',phone:'0901234569',guests:99,date:X.tmr,time:'12:00'}).ok],
+['TC09','Số điện thoại sai định dạng','Bị từ chối',()=>!A.reserve({tableId:X.t0,name:'Dũng',phone:'123',guests:2,date:X.tmr,time:'12:00'}).ok],
+['TC10','Nhận bàn từ đặt trước','Bàn "Có khách", đặt bàn chuyển "đã đến"',()=>{const r=A.reserve({tableId:X.t1,name:'Em',phone:'0912345678',guests:2,date:today(),time:'12:00'});return r.ok&&st(r.x&&T(X.t1))==='reserved'&&A.checkIn(r.x.id).ok&&st(T(X.t1))==='occupied'&&r.x.status==='da_den'}],
+['TC11','Nhận bàn khi bàn đang có khách','Bị từ chối',()=>!A.openOrder(X.t1,'K',2).ok],
+['TC12','Gọi cùng một món 2 lần','Số lượng = 2',()=>{const o=gO(X.t1);A.addItem(o.id,X.m0);A.addItem(o.id,X.m0);return o.items.length===1&&o.items[0].qty===2}],
+['TC13','Gọi món đã hết','Bị từ chối',()=>{Mn(X.m1).avail=false;return !A.addItem(gO(X.t1).id,X.m1).ok}],
+['TC14','Tính tiền 200.000đ, giảm 10%, VAT 10%','Giảm 20.000, VAT 18.000, tổng 198.000',()=>{const c=A.calc({items:[{price:100000,qty:2}]},10);return c.sub===200000&&c.disc===20000&&Math.round(c.vat)===18000&&Math.round(c.total)===198000}],
+['TC15','Thanh toán đơn chưa có món','Bị từ chối',()=>{const r=A.openOrder(X.t2,'',2);return r.ok&&!A.pay(r.x.id,{method:'Tiền mặt',disc:0}).ok}],
+['TC16','Khách đưa thiếu tiền mặt','Bị từ chối',()=>!A.pay(gO(X.t1).id,{method:'Tiền mặt',disc:0,recv:1}).ok],
+['TC17','Giảm giá 150%','Bị từ chối',()=>!A.pay(gO(X.t1).id,{method:'Thẻ',disc:150}).ok],
+['TC18','Thanh toán hợp lệ','Tạo hóa đơn, đóng đơn, bàn trở về "Trống"',()=>A.pay(gO(X.t1).id,{method:'Chuyển khoản',disc:0}).ok&&DB.invoices.length===1&&st(T(X.t1))==='free'],
+['TC19','Xóa bàn đang có khách','Bị từ chối',()=>!A.delTable(X.t2).ok]];
+function runTests(){const bak=JSON.stringify(DB);TEST=true;DB=seed();
+ Object.assign(X,{t0:DB.tables[0].id,t1:DB.tables[1].id,t2:DB.tables[2].id,m0:DB.menu[0].id,m1:DB.menu[1].id,tmr:new Date(Date.now()+864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10)});
+ TR=TESTS.map(([id,d,e,f])=>{let p=false;try{p=!!f()}catch(x){}return{id,d,e,p}});DB=JSON.parse(bak);TEST=false;R()}
+function rep(){const iv=DB.invoices,by={},top={};iv.forEach(i=>{by[i.method]=(by[i.method]||0)+i.total;i.items.forEach(x=>top[x.name]=(top[x.name]||0)+x.qty)});
+ return{rev:iv.reduce((s,i)=>s+i.total,0),n:iv.length,by,top:Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5)}}
+function dl(){const r=rep(),p=TR?TR.filter(t=>t.p).length:0;
+ const txt=`BÁO CÁO HỆ THỐNG QUẢN LÝ NHÀ HÀNG - ${new Date().toLocaleDateString('vi-VN')}\n\nSố bàn: ${DB.tables.length} | Số món: ${DB.menu.length} | Đặt bàn: ${DB.res.length}\nHóa đơn: ${r.n} | Doanh thu: ${fmt(r.rev)}\n${Object.entries(r.by).map(([k,v])=>' - '+k+': '+fmt(v)).join('\n')}\nMón bán chạy: ${r.top.map(t=>t[0]+' ('+t[1]+')').join(', ')||'chưa có'}\n\nKIỂM THỬ: ${TR?p+'/'+TR.length+' đạt':'chưa chạy'}\n${(TR||[]).map(t=>`${t.id} | ${t.d} | Mong đợi: ${t.e} | ${t.p?'ĐẠT':'LỖI'}`).join('\n')}\n`;
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));a.download='bao-cao.txt';a.click()}
+function vTest(){const r=rep(),p=TR?TR.filter(t=>t.p).length:0;
+ return `<h2>Kiểm thử hệ thống</h2><div class="bar"><button class="btn" onclick="runTests()">▶ Chạy ${TESTS.length} test case</button><button class="btn g" onclick="dl()">Tải báo cáo (.txt)</button>
+ <button class="btn g" onclick="if(confirm('Xóa toàn bộ dữ liệu và về dữ liệu mẫu?')){DB=seed();selO=null;save();R()}">Đặt lại dữ liệu mẫu</button>${TR?`<b class="${p===TR.length?'ok':'bad'}">${p}/${TR.length} đạt</b>`:''}</div>
+ <p class="mut">Kiểm thử chạy trên dữ liệu tạm, không ảnh hưởng dữ liệu thật của bạn.</p>
+ ${TR?`<div class="wrap"><table><thead><tr><th>Mã</th><th>Tình huống</th><th>Kết quả mong đợi</th><th>Kết quả</th></tr></thead><tbody>${TR.map(t=>`<tr><td>${t.id}</td><td>${t.d}</td><td>${t.e}</td><td class="${t.p?'ok':'bad'}">${t.p?'✔ Đạt':'✘ Lỗi'}</td></tr>`).join('')}</tbody></table></div>`:''}
+ <h2>Báo cáo tổng hợp</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr))">
+ <div class="stat"><b>${fmt(r.rev)}</b><span>Tổng doanh thu</span></div><div class="stat"><b>${r.n}</b><span>Hóa đơn đã xuất</span></div>
+ <div class="stat"><b>${DB.res.filter(x=>x.status==='cho').length}</b><span>Đặt bàn đang chờ</span></div><div class="stat"><b>${openOrders().length}</b><span>Bàn đang phục vụ</span></div></div>
+ <div class="g2" style="margin-top:12px"><div class="card"><h4>Doanh thu theo hình thức</h4>${Object.entries(r.by).map(([k,v])=>`<div class="tot"><span>${k}</span><b>${fmt(v)}</b></div>`).join('')||'<span class="mut">Chưa có dữ liệu.</span>'}</div>
+ <div class="card"><h4>Món bán chạy</h4>${r.top.map(([k,v])=>`<div class="tot"><span>${esc(k)}</span><b>${v}</b></div>`).join('')||'<span class="mut">Chưa có dữ liệu.</span>'}</div></div>`}
+R();
+</script>
+</body>
+</html>
